@@ -117,6 +117,7 @@ body[data-state="listening"] #stateTxt{animation:blink 1.1s ease-in-out infinite
 .chip:hover{background:hsl(var(--h) 100% 60% / .16)}
 
 /* dock */
+.credit{grid-column:1/-1;order:10;text-align:center;font:400 10px var(--font-m);letter-spacing:.28em;text-transform:uppercase;color:var(--c);opacity:.3;margin-top:-6px;pointer-events:none;user-select:none}
 .dock{grid-column:1/-1;flex-direction:row;align-items:center;gap:12px;padding:10px 12px}
 .mic{width:50px;height:50px;border-radius:50%;border:2px solid var(--c);background:hsl(var(--h) 100% 50% / .08);color:var(--c);display:grid;place-items:center;flex:none;position:relative;transition:.2s}
 .mic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -133,6 +134,9 @@ body[data-state="listening"] #stateTxt{animation:blink 1.1s ease-in-out infinite
 .modal[hidden]{display:none}
 .sheet{width:min(620px,100%);max-height:calc(100% - 8px);overflow:auto;background:#030c14;border:1px solid var(--line);padding:22px;display:grid;gap:14px;position:relative;box-shadow:0 0 60px hsl(var(--h) 100% 50% / .18)}
 .sheet h2{font:700 14px var(--font-d);letter-spacing:.3em;color:var(--c)}
+.keyrow{position:relative;display:block}
+.keyrow input{padding-right:64px!important}
+.keyrow .eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:5px 9px;border:1px solid var(--line);background:transparent;color:var(--c);font:700 10px var(--font-d);letter-spacing:.16em;text-transform:uppercase}
 .sheet label{display:grid;gap:5px;font:400 12px var(--font-m);letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
 .sheet input[type=text],.sheet input[type=password],.sheet select,.sheet textarea{width:100%;background:hsl(var(--h) 100% 50% / .05);border:1px solid var(--line);padding:10px 11px;color:var(--fg);font:500 16px var(--font-b);letter-spacing:.02em;text-transform:none}
 .sheet textarea{min-height:92px;resize:vertical}
@@ -236,6 +240,7 @@ body[data-state="listening"] #stateTxt{animation:blink 1.1s ease-in-out infinite
     <input id="inp" type="text" placeholder="Type a command, or press the mic and speak" aria-label="Command">
     <button class="go" type="submit">Send</button>
   </form>
+  <div class="credit">Made by Ryvix Studios</div>
 </div>
 
 <div class="modal" id="settings" hidden>
@@ -603,8 +608,9 @@ function stopSpeech() {
 
 /* ---------- speech input ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-const WAKE_RE = /\b(ryvix|rivix|ryvics|rivics|ryvex|rivex|ry vix|rye vix|ry vics|rye vics|ryvicks|rivicks)\b/;
-const WAKE_LEAD = /^(ryvix|rivix|ryvics|rivics|ryvex|rivex|ry vix|rye vix|ry vics|rye vics|ryvicks|rivicks)[\s,.:!-]*/i;
+const WAKE_WORDS = 'ryvix|rivix|ryvics|rivics|ryvex|rivex|ryvax|rivax|ryvacks|ryvis|rivis|lyrics|lyric|ry vix|rye vix|ry vics|rye vics|ry vax|rye vax|ryvicks|rivicks';
+const WAKE_RE = new RegExp('\b(' + WAKE_WORDS + ')\b');
+const WAKE_LEAD = new RegExp('^(' + WAKE_WORDS + ')[\s,.:!-]*', 'i');
 let rec = null, wantListen = false, armedUntil = 0, micLive = false, muteUntil = 0;
 const deaf = () => speech.playing || busy || Date.now() < muteUntil;
 const micBtn = $('#mic');
@@ -756,6 +762,25 @@ function miniSync() {
   miniEls.btn.textContent = micLive ? 'STOP MIC' : 'START MIC';
   miniEls.btn.classList.toggle('on', micLive);
 }
+/* ---------- show/hide API keys ---------- */
+function addReveal(id) {
+  const inp = $(id);
+  const wrap = document.createElement('span');
+  wrap.className = 'keyrow';
+  inp.parentNode.insertBefore(wrap, inp);
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'eye'; btn.textContent = 'Show';
+  btn.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    btn.textContent = show ? 'Hide' : 'Show';
+    inp.focus();
+  });
+  wrap.append(inp, btn);
+  inp.hideKey = () => { inp.type = 'password'; btn.textContent = 'Show'; };
+}
+addReveal('#sOr'); addReveal('#sFish');
 $('#sMini').addEventListener('click', () => {
   if (!window.documentPictureInPicture) { $('#sStatus').textContent = 'The floating window needs Chrome or Edge.'; return; }
   openMini();
@@ -844,7 +869,7 @@ const NOTES_KEY = 'ryvix.notes';
 if (store.get(NOTES_KEY, null) === null) { const old = store.get('jarvis.notes', null); if (old !== null) store.set(NOTES_KEY, old); }
 
 async function tryLocal(raw) {
-  const q = raw.toLowerCase().replace(/[.,!?]+$/g, '').replace(/^(hey |ok |okay )?(ryvix|rivix|ryvics|rivics|ry vix|rye vix|rye vics)[, ]*/, '').replace(/^(please|can you|could you|would you) /, '').trim();
+  const q = raw.toLowerCase().replace(/[.,!?]+$/g, '').replace(new RegExp('^(hey |ok |okay )?(' + WAKE_WORDS + ')[, ]*'), '').replace(/^(please|can you|could you|would you) /, '').trim();
   let m;
   if (/^(stop|be quiet|silence|enough|cancel|never mind)$/.test(q)) { return ''; }
   if (/^(help|what can you do|commands|list commands)$/.test(q))
@@ -1014,6 +1039,7 @@ document.addEventListener('keydown', e => {
 
 /* ---------- settings ---------- */
 function openSettings() {
+  $('#sOr').hideKey(); $('#sFish').hideKey();
   $('#sOr').value = cfg.orKey; $('#sModel').value = cfg.model; $('#sFish').value = cfg.fishKey; $('#sVoice').value = cfg.fishVoice;
   $('#sFishModel').value = cfg.fishModel; $('#sLang').value = cfg.lang; $('#sName').value = cfg.name; $('#sSystem').value = cfg.system;
   $('#sVoiceOn').checked = cfg.voiceOn; $('#sFallback').checked = cfg.fallback; $('#sWake').checked = cfg.wake;
