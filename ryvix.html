@@ -1,0 +1,1233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PreficPresentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+/* Layout: three-column HUD (system | reactor core | comms log) with a command dock along the bottom. */
+:root{
+  --h:190;
+  --bg:#02060b;
+  --fg:hsl(var(--h) 60% 90%);
+  --c:hsl(var(--h) 100% 62%);
+  --c-soft:hsl(var(--h) 100% 62% / .55);
+  --line:hsl(var(--h) 100% 62% / .32);
+  --line2:hsl(var(--h) 100% 62% / .07);
+  --panel:hsl(var(--h) 100% 50% / .045);
+  --dim:hsl(var(--h) 35% 62%);
+  --warn:#ff5d5d;
+  --font-d:'Orbitron','Segoe UI',system-ui,sans-serif;
+  --font-b:'Rajdhani','Segoe UI',system-ui,sans-serif;
+  --font-m:'Share Tech Mono',ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:500 16px/1.4 var(--font-b);overflow:hidden;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+
+/* ambient layers */
+.fx{position:fixed;inset:0;pointer-events:none}
+.fx-grid{background-image:linear-gradient(var(--line2) 1px,transparent 1px),linear-gradient(90deg,var(--line2) 1px,transparent 1px);background-size:46px 46px;-webkit-mask-image:radial-gradient(ellipse at 50% 45%,#000 25%,transparent 80%);mask-image:radial-gradient(ellipse at 50% 45%,#000 25%,transparent 80%)}
+.fx-glow{background:radial-gradient(circle at 50% 46%,hsl(var(--h) 100% 50% / .13),transparent 58%),radial-gradient(ellipse at 50% 120%,hsl(var(--h) 100% 50% / .10),transparent 60%)}
+.fx-scan{background:repeating-linear-gradient(0deg,rgba(255,255,255,.028) 0 1px,transparent 1px 3px);z-index:50;mix-blend-mode:screen}
+.fx-sweep{z-index:49;background:linear-gradient(180deg,transparent,hsl(var(--h) 100% 60% / .06),transparent);height:22vh;animation:sweep 7s linear infinite}
+@keyframes sweep{from{transform:translateY(-30vh)}to{transform:translateY(110vh)}}
+
+#app{position:relative;z-index:2;height:100%;display:grid;gap:14px;
+  grid-template-columns:minmax(230px,280px) minmax(0,1fr) minmax(290px,370px);
+  grid-template-rows:auto minmax(0,1fr) auto;
+  padding:max(14px,env(safe-area-inset-top,0px)) max(18px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))}
+
+/* header */
+.top{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}
+.logo{width:40px;height:40px;border-radius:50%;border:2px solid var(--c);position:relative;box-shadow:0 0 18px var(--c-soft),inset 0 0 12px var(--c-soft);flex:none}
+.logo::before{content:"";position:absolute;inset:7px;border-radius:50%;border:1px dashed var(--c);animation:spin 9s linear infinite}
+.logo::after{content:"";position:absolute;inset:14px;border-radius:50%;background:var(--c);box-shadow:0 0 14px var(--c)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.brand h1{font:900 22px/1 var(--font-d);letter-spacing:.32em;color:var(--c);text-shadow:0 0 14px var(--c-soft)}
+.brand p{font:400 11px/1 var(--font-m);letter-spacing:.2em;color:var(--dim);margin-top:6px;text-transform:uppercase}
+.pills{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{font:400 12px/1 var(--font-m);letter-spacing:.12em;padding:8px 10px;border:1px solid var(--line);background:var(--panel);color:var(--dim);text-transform:uppercase}
+.pill b{color:var(--c);font-weight:400;margin-left:6px}
+.pill.bad b{color:var(--warn)}
+.icon{width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--line);background:var(--panel);color:var(--c);transition:.2s}
+.icon:hover{background:hsl(var(--h) 100% 60% / .16);box-shadow:0 0 14px var(--line)}
+.icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* panels */
+.panel{position:relative;border:1px solid var(--line2);background:var(--panel);padding:16px;min-height:0;display:flex;flex-direction:column;gap:12px;backdrop-filter:blur(3px)}
+.panel::before,.panel::after{content:"";position:absolute;width:16px;height:16px;border:2px solid var(--c);pointer-events:none;filter:drop-shadow(0 0 4px var(--c))}
+.panel::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
+.panel::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+.h{font:700 11px/1 var(--font-d);letter-spacing:.3em;color:var(--c);display:flex;align-items:center;gap:10px;text-transform:uppercase}
+.h::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+
+/* left */
+.left{overflow:auto}
+#clock{font:700 40px/1 var(--font-d);letter-spacing:.04em;color:var(--fg);text-shadow:0 0 18px var(--c-soft);font-variant-numeric:tabular-nums}
+#clock small{font-size:16px;color:var(--c);margin-left:6px}
+#date{font:400 13px/1.2 var(--font-m);letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-top:6px}
+.row{display:grid;gap:5px}
+.rl{display:flex;justify-content:space-between;font:400 12px/1 var(--font-m);letter-spacing:.14em;color:var(--dim)}
+.rl b{color:var(--fg);font-weight:400}
+.bar{height:5px;background:hsl(var(--h) 100% 60% / .1);position:relative;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,hsl(var(--h) 100% 45%),var(--c));box-shadow:0 0 10px var(--c);transition:width .8s}
+#sysRows{display:grid;gap:12px}
+#timers{display:grid;gap:6px;font:400 13px/1.2 var(--font-m)}
+#timers div{display:flex;justify-content:space-between;gap:8px;border-left:2px solid var(--c);padding:4px 8px;background:hsl(var(--h) 100% 60% / .06)}
+#timers .none{border:0;color:var(--dim);background:none;padding:0}
+#timers span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#stream{font:400 11px/1.5 var(--font-m);color:hsl(var(--h) 80% 55% / .6);overflow:hidden;white-space:pre;height:6.6em;letter-spacing:.06em;margin-top:auto}
+
+/* stage */
+.stage{position:relative;min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto auto;justify-items:center;align-items:center;gap:6px}
+.core{position:relative;width:100%;height:100%;min-height:0}
+#core{position:absolute;inset:0;width:100%;height:100%;cursor:pointer}
+#stateTxt{font:700 15px/1 var(--font-d);letter-spacing:.5em;color:var(--c);text-shadow:0 0 14px var(--c);padding-left:.5em}
+#caption{font:500 18px/1.35 var(--font-b);color:var(--fg);text-align:center;max-width:min(680px,100%);min-height:2.7em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;padding:0 12px}
+#caption.interim{color:var(--dim);font-style:italic}
+#caption.err{color:var(--warn)}
+#sStatus{font:400 13px/1.5 var(--font-m);color:var(--fg);white-space:pre-line;min-height:1.5em;overflow-wrap:anywhere}
+body[data-state="listening"] #stateTxt{animation:blink 1.1s ease-in-out infinite}
+@keyframes blink{50%{opacity:.35}}
+
+/* log */
+.right{min-height:0}
+#log{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.msg{display:grid;gap:3px;font-size:16px;line-height:1.35;overflow-wrap:anywhere;animation:in .35s ease-out}
+@keyframes in{from{opacity:0;transform:translateX(8px)}}
+.msg .who{font:400 11px/1 var(--font-m);letter-spacing:.22em;color:var(--dim)}
+.msg .txt{white-space:pre-wrap}
+.msg.user .who{color:hsl(calc(var(--h) + 150) 90% 70%)}
+.msg.user .txt{color:hsl(var(--h) 30% 85%)}
+.msg.jarvis{border-left:2px solid var(--c);padding-left:10px}
+.msg.jarvis .who{color:var(--c)}
+.msg.sys .txt{font:400 13px/1.4 var(--font-m);color:var(--dim)}
+.msg.err .who,.msg.err .txt{color:var(--warn)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:400 11px/1 var(--font-m);letter-spacing:.14em;padding:7px 9px;border:1px solid var(--line);background:transparent;color:var(--c);text-transform:uppercase;transition:.2s}
+.chip:hover{background:hsl(var(--h) 100% 60% / .16)}
+
+/* dock */
+.dock{grid-column:1/-1;flex-direction:row;align-items:center;gap:12px;padding:10px 12px}
+.mic{width:50px;height:50px;border-radius:50%;border:2px solid var(--c);background:hsl(var(--h) 100% 50% / .08);color:var(--c);display:grid;place-items:center;flex:none;position:relative;transition:.2s}
+.mic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mic.on{background:var(--c);color:#001018;box-shadow:0 0 22px var(--c)}
+.mic.on::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:2px solid var(--c);animation:ping 1.2s ease-out infinite}
+@keyframes ping{from{opacity:.9;transform:scale(.85)}to{opacity:0;transform:scale(1.4)}}
+#inp{flex:1;min-width:0;background:hsl(var(--h) 100% 50% / .05);border:1px solid var(--line);padding:13px 14px;font:500 17px var(--font-b);letter-spacing:.03em}
+#inp::placeholder{color:var(--dim)}
+.go{height:50px;padding:0 20px;border:1px solid var(--c);background:hsl(var(--h) 100% 50% / .12);color:var(--c);font:700 12px var(--font-d);letter-spacing:.25em;text-transform:uppercase;transition:.2s}
+.go:hover{background:var(--c);color:#001018;box-shadow:0 0 18px var(--c)}
+
+/* settings */
+.modal{position:fixed;inset:0;z-index:80;background:rgba(0,4,8,.72);display:grid;place-items:center;padding:16px;backdrop-filter:blur(4px)}
+.modal[hidden]{display:none}
+.sheet{width:min(620px,100%);max-height:calc(100% - 8px);overflow:auto;background:#030c14;border:1px solid var(--line);padding:22px;display:grid;gap:14px;position:relative;box-shadow:0 0 60px hsl(var(--h) 100% 50% / .18)}
+.sheet h2{font:700 14px var(--font-d);letter-spacing:.3em;color:var(--c)}
+.sheet label{display:grid;gap:5px;font:400 12px var(--font-m);letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
+.sheet input[type=text],.sheet input[type=password],.sheet select,.sheet textarea{width:100%;background:hsl(var(--h) 100% 50% / .05);border:1px solid var(--line);padding:10px 11px;color:var(--fg);font:500 16px var(--font-b);letter-spacing:.02em;text-transform:none}
+.sheet textarea{min-height:92px;resize:vertical}
+.sheet small{font:400 12px/1.4 var(--font-b);color:var(--dim);text-transform:none;letter-spacing:.02em}
+.sheet a{color:var(--c)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.checks{display:flex;flex-wrap:wrap;gap:8px 20px}
+.checks label{display:flex;align-items:center;gap:8px;text-transform:none;font:500 15px var(--font-b);letter-spacing:.02em;color:var(--fg)}
+.checks input{accent-color:var(--c);width:16px;height:16px}
+.btns{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.btn{padding:11px 18px;border:1px solid var(--line);background:transparent;color:var(--c);font:700 11px var(--font-d);letter-spacing:.22em;text-transform:uppercase}
+.btn.pri{background:var(--c);color:#001018;border-color:var(--c)}
+.btn:hover{box-shadow:0 0 14px var(--line)}
+
+/* boot */
+#boot{position:fixed;inset:0;z-index:100;background:var(--bg);display:grid;place-items:center;transition:opacity .9s,visibility .9s}
+#boot.gone{opacity:0;visibility:hidden}
+.bootbox{display:grid;gap:22px;justify-items:center;text-align:center;padding:20px}
+.ring{width:150px;height:150px;border-radius:50%;border:2px solid var(--c);position:relative;box-shadow:0 0 40px var(--c-soft),inset 0 0 40px var(--c-soft)}
+.ring::before,.ring::after{content:"";position:absolute;border-radius:50%}
+.ring::before{inset:14px;border:2px dashed var(--c);animation:spin 6s linear infinite}
+.ring::after{inset:38px;border:3px solid var(--c);border-top-color:transparent;border-bottom-color:transparent;animation:spin 2.2s linear infinite reverse}
+.bootbox h2{font:900 26px var(--font-d);letter-spacing:.4em;color:var(--c);padding-left:.4em;text-shadow:0 0 20px var(--c)}
+#bootLog{font:400 13px/1.7 var(--font-m);color:var(--dim);min-height:7.5em;text-align:left;letter-spacing:.1em}
+#bootLog .ok{color:var(--c)}
+
+@media (max-width:1000px){
+  body{overflow:auto}
+  #app{height:auto;min-height:100%;grid-template-columns:minmax(0,1fr);grid-template-rows:none}
+  .stage{height:min(54vh,440px)}
+  .right{height:300px}
+  .left{order:3;overflow:visible}
+  .dock{position:sticky;bottom:0;order:9;background:#030c14}
+}
+@media (max-width:560px){
+  .go{padding:0 12px;letter-spacing:.12em}
+  .pill{padding:7px 8px;font-size:11px}
+  .brand h1{font-size:18px}
+  .brand p{display:none}
+  #clock{font-size:32px}
+  .two{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  .fx-sweep,.logo::before,.ring::before,.ring::after,.mic.on::after{animation:none}
+  body[data-state="listening"] #stateTxt{animation:none}
+}
+</style>
+</head>
+<body data-state="idle">
+<div class="fx fx-grid"></div>
+<div class="fx fx-glow"></div>
+<div class="fx fx-sweep"></div>
+<div class="fx fx-scan"></div>
+
+<div id="app">
+  <header class="top">
+    <div class="brand">
+      <span class="logo"></span>
+      <div><h1>RYVIX</h1><p>Personal AI Assistant</p></div>
+    </div>
+    <div class="pills">
+      <span class="pill" id="pLink">Link<b>--</b></span>
+      <span class="pill" id="pVoice">Voice<b>--</b></span>
+      <span class="pill" id="pWake">Wake<b>OFF</b></span>
+      <button class="icon" id="btnFs" type="button" title="Fullscreen" aria-label="Toggle fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <button class="icon" id="btnSet" type="button" title="Settings" aria-label="Open settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </div>
+  </header>
+
+  <aside class="panel left">
+    <div class="h">Chronometer</div>
+    <div><div id="clock">--:--</div><div id="date">--</div></div>
+    <div class="h">System</div>
+    <div id="sysRows"></div>
+    <div class="h">Timers</div>
+    <div id="timers"><div class="none">No active timers</div></div>
+    <div id="stream" aria-hidden="true"></div>
+  </aside>
+
+  <main class="stage">
+    <div class="core"><canvas id="core" aria-label="Reactor core. Click to talk."></canvas></div>
+    <div id="stateTxt">STANDING BY</div>
+    <div id="caption"></div>
+  </main>
+
+  <aside class="panel right">
+    <div class="h">Comms log</div>
+    <div id="log" aria-live="polite"></div>
+    <div class="chips" id="chips">
+      <button class="chip" type="button" data-q="what time is it">Time</button>
+      <button class="chip" type="button" data-q="weather">Weather</button>
+      <button class="chip" type="button" data-q="system status">Status</button>
+      <button class="chip" type="button" data-q="read my notes">Notes</button>
+      <button class="chip" type="button" data-q="tell me a joke">Joke</button>
+      <button class="chip" type="button" data-q="help">Commands</button>
+    </div>
+  </aside>
+
+  <form class="panel dock" id="form" autocomplete="off">
+    <button class="mic" id="mic" type="button" title="Talk to Ryvix" aria-label="Talk to Ryvix"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+    <input id="inp" type="text" placeholder="Type a command, or press the mic and speak" aria-label="Command">
+    <button class="go" type="submit">Send</button>
+  </form>
+</div>
+
+<div class="modal" id="settings" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Settings">
+    <h2>CONFIGURATION</h2>
+    <label>OpenRouter API key
+      <input type="password" id="sOr" placeholder="sk-or-v1-..." autocomplete="off">
+      <small>Create one at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>. Keys stay in this browser's local storage and are sent only to OpenRouter.</small>
+    </label>
+    <label>Model
+      <input type="text" id="sModel" list="models" autocomplete="off">
+      <datalist id="models">
+        <option value="meta-llama/llama-3.3-70b-instruct:free">
+        <option value="openrouter/auto">
+        <option value="openai/gpt-4o-mini">
+        <option value="google/gemini-2.0-flash-001">
+      </datalist>
+      <small>Any slug from <a href="https://openrouter.ai/models" target="_blank" rel="noopener">openrouter.ai/models</a>. Models ending in :free cost nothing but can be rate limited or retired.</small>
+    </label>
+    <div class="two">
+      <label>Fish Audio API key
+        <input type="password" id="sFish" placeholder="Fish Audio key" autocomplete="off">
+      </label>
+      <label>Fish voice ID
+        <input type="text" id="sVoice" placeholder="reference_id (optional)" autocomplete="off">
+      </label>
+    </div>
+    <small>Get a key at <a href="https://fish.audio" target="_blank" rel="noopener">fish.audio</a>. The voice ID is the long code at the end of a voice's page URL (fish.audio/m/<b>that-code</b>). Leave it blank for the default voice.</small>
+    <div class="two">
+      <label>Fish model header
+        <select id="sFishModel">
+          <option value="">API default</option>
+          <option value="s1">s1</option>
+          <option value="speech-1.6">speech-1.6</option>
+        </select>
+      </label>
+      <label>Listening language
+        <input type="text" id="sLang" placeholder="en-US" autocomplete="off">
+      </label>
+    </div>
+    <label>Address me as
+      <input type="text" id="sName" placeholder="sir" autocomplete="off">
+    </label>
+    <label>Personality prompt
+      <textarea id="sSystem"></textarea>
+    </label>
+    <div class="checks">
+      <label><input type="checkbox" id="sVoiceOn"> Speak replies aloud</label>
+      <label><input type="checkbox" id="sFallback"> Use browser voice if Fish Audio fails</label>
+      <label><input type="checkbox" id="sWake"> Always listen for "Ryvix"</label>
+    </div>
+    <div id="sStatus" aria-live="polite"></div>
+    <div class="btns">
+      <button class="btn" type="button" id="sTest">Test connection</button>
+      <button class="btn" type="button" id="sMini">Floating window</button>
+      <button class="btn" type="button" id="sCancel">Close</button>
+      <button class="btn pri" type="button" id="sSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="boot">
+  <div class="bootbox">
+    <div class="ring"></div>
+    <h2>RYVIX</h2>
+    <div id="bootLog"></div>
+    <button class="btn pri" type="button" id="bootBtn">Initialize</button>
+  </div>
+</div>
+
+<audio id="tts" preload="auto"></audio>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const TAU = Math.PI * 2;
+const root = document.documentElement;
+const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- storage and config ---------- */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const DEFAULT_SYSTEM = 'You are Ryvix (pronounced RY-vix, like Ryan), a composed, quietly witty AI assistant with a dry British manner, in the style of a highly capable butler. Your replies are spoken aloud, so keep them short (one to three sentences unless asked for more), use plain text only, and never use markdown, bullet points, emojis or code fences. Be direct, useful and a little charming.';
+const cfg = Object.assign({
+  orKey: '', model: 'meta-llama/llama-3.3-70b-instruct:free',
+  fishKey: '', fishVoice: '', fishModel: '',
+  name: 'sir', lang: 'en-US', system: DEFAULT_SYSTEM,
+  voiceOn: true, fallback: true, wake: false, hue: 190
+}, store.get('ryvix.cfg', store.get('jarvis.cfg', {})));
+if (typeof cfg.system === 'string') cfg.system = cfg.system.replace(/J\.A\.R\.V\.I\.S\./g, 'Ryvix (pronounced RY-vix, like Ryan)');
+const saveCfg = () => store.set('ryvix.cfg', cfg);
+
+/* ---------- state ---------- */
+let state = 'idle';
+let busy = false;
+let currentCtrl = null;
+let history = [];
+let mini = null, miniEls = null;
+const STATE_LABEL = { idle: 'STANDING BY', listening: 'LISTENING', thinking: 'PROCESSING', speaking: 'SPEAKING' };
+function setState(s) {
+  state = s;
+  $('#stateTxt').textContent = STATE_LABEL[s];
+  document.body.dataset.state = s;
+  miniSync();
+}
+
+/* ---------- log and caption ---------- */
+function addMsg(role, text) {
+  const log = $('#log');
+  const m = document.createElement('div');
+  m.className = 'msg ' + role;
+  const who = document.createElement('span');
+  who.className = 'who';
+  who.textContent = { user: 'YOU', jarvis: 'RYVIX', sys: 'SYSTEM', err: 'ALERT' }[role];
+  const t = document.createElement('span');
+  t.className = 'txt';
+  t.textContent = text;
+  m.append(who, t);
+  log.append(m);
+  while (log.children.length > 80) log.firstChild.remove();
+  log.scrollTop = log.scrollHeight;
+  if (role === 'err') caption(text, false, true);
+  return t;
+}
+const sys = t => addMsg('sys', t);
+function caption(t, interim, err) {
+  const c = $('#caption');
+  c.textContent = t;
+  c.classList.toggle('interim', !!interim);
+  c.classList.toggle('err', !!err);
+  miniSync();
+}
+function respond(text) {
+  if (!text) return;
+  addMsg('jarvis', text);
+  history.push({ role: 'assistant', content: text });
+  caption(text);
+  say(text);
+}
+
+/* ---------- pills ---------- */
+function refreshPills() {
+  const link = $('#pLink'), voice = $('#pVoice'), wake = $('#pWake');
+  link.classList.toggle('bad', !cfg.orKey);
+  link.querySelector('b').textContent = cfg.orKey ? 'ONLINE' : 'NO KEY';
+  voice.classList.toggle('bad', !cfg.voiceOn);
+  voice.querySelector('b').textContent = !cfg.voiceOn ? 'MUTED' : cfg.fishKey ? 'FISH' : 'BROWSER';
+  wake.querySelector('b').textContent = cfg.wake ? 'ON' : 'OFF';
+  setRow('model', cfg.model.split('/').pop().replace(':free', '').slice(0, 18), 100);
+}
+
+/* ---------- left panel ---------- */
+const rowsDef = [['cores', 'CPU CORES'], ['mem', 'MEMORY'], ['net', 'NETWORK'], ['bat', 'BATTERY'], ['up', 'SESSION'], ['model', 'MODEL']];
+$('#sysRows').innerHTML = rowsDef.map(([k, l]) =>
+  `<div class="row" id="r-${k}"><div class="rl"><span>${l}</span><b>--</b></div><div class="bar"><i></i></div></div>`).join('');
+function setRow(k, val, pct) {
+  const r = $('#r-' + k);
+  if (!r) return;
+  r.querySelector('b').textContent = val;
+  r.querySelector('i').style.width = Math.max(0, Math.min(100, pct)) + '%';
+}
+const sessionStart = Date.now();
+const batt = { level: null, charging: false };
+function updateStatic() {
+  const cores = navigator.hardwareConcurrency || 0;
+  setRow('cores', cores ? String(cores) : 'N/A', cores / 16 * 100);
+  const mem = navigator.deviceMemory;
+  setRow('mem', mem ? mem + ' GB' : 'N/A', mem ? mem / 8 * 100 : 0);
+  const c = navigator.connection;
+  if (!navigator.onLine) setRow('net', 'OFFLINE', 0);
+  else setRow('net', c && c.effectiveType ? c.effectiveType.toUpperCase() : 'ONLINE', c && c.downlink ? c.downlink / 20 * 100 : 100);
+  if (batt.level === null) setRow('bat', 'N/A', 0);
+  else setRow('bat', Math.round(batt.level * 100) + '%' + (batt.charging ? ' +' : ''), batt.level * 100);
+}
+if (navigator.getBattery) {
+  navigator.getBattery().then(b => {
+    const u = () => { batt.level = b.level; batt.charging = b.charging; updateStatic(); };
+    b.addEventListener('levelchange', u); b.addEventListener('chargingchange', u); u();
+  }).catch(() => {});
+}
+window.addEventListener('online', updateStatic);
+window.addEventListener('offline', updateStatic);
+
+const timers = [];
+const fmtDur = ms => {
+  const s = Math.max(0, Math.round(ms / 1000));
+  const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+  const p = n => String(n).padStart(2, '0');
+  return h ? `${h}:${p(m)}:${p(x)}` : `${p(m)}:${p(x)}`;
+};
+function renderTimers() {
+  const box = $('#timers');
+  box.textContent = '';
+  if (!timers.length) {
+    const d = document.createElement('div'); d.className = 'none'; d.textContent = 'No active timers'; box.append(d); return;
+  }
+  timers.forEach(t => {
+    const d = document.createElement('div');
+    const a = document.createElement('span'); a.textContent = t.label || 'Timer';
+    const b = document.createElement('span'); b.textContent = fmtDur(t.end - Date.now());
+    d.append(a, b); box.append(d);
+  });
+}
+function addTimer(ms, label) {
+  const t = { id: Math.random(), label, end: Date.now() + ms };
+  t.handle = setTimeout(() => {
+    const i = timers.findIndex(x => x.id === t.id);
+    if (i >= 0) timers.splice(i, 1);
+    renderTimers(); chime();
+    respond(label ? `${cap(cfg.name)}, a reminder: ${label}.` : `${cap(cfg.name)}, your timer is up.`);
+  }, ms);
+  timers.push(t); renderTimers();
+}
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+function tick() {
+  const d = new Date();
+  const hh = d.getHours() % 12 || 12, mm = String(d.getMinutes()).padStart(2, '0');
+  $('#clock').innerHTML = `${hh}:${mm}<small>${d.getHours() < 12 ? 'AM' : 'PM'}</small>`;
+  $('#date').textContent = d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+  const up = Date.now() - sessionStart;
+  setRow('up', fmtDur(up), (up / 3600000) * 100);
+  if (timers.length) renderTimers();
+}
+setInterval(tick, 1000); tick();
+
+const streamEl = $('#stream');
+const streamLines = [];
+function pushStream() {
+  const hex = () => Math.floor(Math.random() * 65535).toString(16).padStart(4, '0').toUpperCase();
+  streamLines.push(Array.from({ length: 6 }, hex).join(' '));
+  if (streamLines.length > 5) streamLines.shift();
+  streamEl.textContent = streamLines.join('\n');
+}
+if (!reduceMotion) setInterval(pushStream, 400);
+
+/* ---------- audio output ---------- */
+const audioEl = $('#tts');
+let actx = null, analyser = null, freq = null;
+function ensureAudio() {
+  if (actx) { if (actx.state === 'suspended') actx.resume(); return; }
+  try {
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = actx.createMediaElementSource(audioEl);
+    analyser = actx.createAnalyser();
+    analyser.fftSize = 256; analyser.smoothingTimeConstant = .8;
+    src.connect(analyser); analyser.connect(actx.destination);
+    freq = new Uint8Array(analyser.frequencyBinCount);
+  } catch (e) { actx = analyser = null; }
+}
+function chime() {
+  ensureAudio();
+  if (!actx) return;
+  try {
+    [880, 1320].forEach((f, i) => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      const t0 = actx.currentTime + i * .18;
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.18, t0 + .02); g.gain.exponentialRampToValueAtTime(.001, t0 + .4);
+      o.connect(g); g.connect(actx.destination); o.start(t0); o.stop(t0 + .45);
+    });
+  } catch (e) {}
+}
+
+const speech = { queue: [], playing: false, gen: 0, mode: 'idle', cancel: null };
+let fishWarned = false;
+
+function speakable(t) {
+  return t.replace(/```[\s\S]*?```/g, ' code omitted. ').replace(/`([^`]*)`/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/https?:\/\/\S+/g, 'link')
+    .replace(/[*_#>~|]/g, '').replace(/\s+/g, ' ').trim();
+}
+function fishTTS(text, signal) {
+  const headers = { 'Authorization': 'Bearer ' + cfg.fishKey, 'Content-Type': 'application/json' };
+  if (cfg.fishModel) headers.model = cfg.fishModel;
+  const body = { text, format: 'mp3', latency: 'balanced', normalize: true };
+  if (cfg.fishVoice) body.reference_id = cfg.fishVoice;
+  return fetch('https://api.fish.audio/v1/tts', { method: 'POST', headers, body: JSON.stringify(body), signal })
+    .then(async r => {
+      if (!r.ok) { let m = ''; try { m = (await r.text()).slice(0, 160); } catch (e) {} throw new Error(r.status + ' ' + m); }
+      return r.blob();
+    });
+}
+function say(text) {
+  if (!cfg.voiceOn) return;
+  const t = speakable(text);
+  if (!/[a-z0-9]/i.test(t)) return;
+  const item = { text: t, ctrl: null, audioP: null };
+  if (cfg.fishKey) {
+    item.ctrl = new AbortController();
+    item.audioP = fishTTS(t, item.ctrl.signal);
+    item.audioP.catch(() => {});
+  }
+  speech.queue.push(item);
+  pump();
+}
+function playBlob(blob) {
+  return new Promise(res => {
+    const url = URL.createObjectURL(blob);
+    const cleanup = () => { audioEl.onended = audioEl.onerror = null; URL.revokeObjectURL(url); speech.cancel = null; speech.mode = 'idle'; };
+    const done = () => { cleanup(); res(); };
+    speech.cancel = () => { audioEl.pause(); done(); };
+    audioEl.onended = done; audioEl.onerror = done;
+    audioEl.src = url; speech.mode = 'audio';
+    ensureAudio();
+    audioEl.play().catch(done);
+  });
+}
+let voiceChoice = null;
+function pickVoice() {
+  if (!('speechSynthesis' in window)) return null;
+  if (voiceChoice) return voiceChoice;
+  const vs = speechSynthesis.getVoices();
+  voiceChoice = vs.find(v => /daniel|google uk english male/i.test(v.name)) || vs.find(v => /en-GB/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null;
+  return voiceChoice;
+}
+if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => { voiceChoice = null; };
+function synthSpeak(text) {
+  return new Promise(res => {
+    if (!('speechSynthesis' in window)) return res();
+    const u = new SpeechSynthesisUtterance(text);
+    const v = pickVoice(); if (v) u.voice = v;
+    u.rate = 1.02; u.pitch = .9;
+    const done = () => { speech.mode = 'idle'; speech.cancel = null; res(); };
+    u.onend = done; u.onerror = done;
+    speech.mode = 'synth'; speech.cancel = () => speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  });
+}
+async function playItem(item, gen) {
+  let blob = null;
+  if (item.audioP) {
+    try { blob = await item.audioP; }
+    catch (e) {
+      if (e && e.name === 'AbortError') return;
+      if (!fishWarned) { fishWarned = true; addMsg('err', 'Fish Audio request failed (' + (e && e.message ? e.message : 'network error') + '). ' + (cfg.fallback ? 'Falling back to the browser voice.' : 'Check the key in settings.')); }
+    }
+  }
+  if (gen !== speech.gen) return;
+  caption(item.text);
+  if (blob) await playBlob(blob);
+  else if (cfg.fallback || !cfg.fishKey) await synthSpeak(item.text);
+}
+async function pump() {
+  if (speech.playing) return;
+  speech.playing = true;
+  const g = speech.gen;
+  setState('speaking');
+  pauseListening();
+  while (speech.queue.length && g === speech.gen) await playItem(speech.queue.shift(), g);
+  speech.playing = false;
+  if (speech.queue.length) { pump(); return; }
+  setState(busy ? 'thinking' : 'idle');
+  if (!busy) resumeListening();
+}
+function stopSpeech() {
+  speech.gen++;
+  speech.queue.forEach(i => i.ctrl && i.ctrl.abort());
+  speech.queue.length = 0;
+  if (speech.cancel) speech.cancel();
+}
+
+/* ---------- speech input ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const WAKE_RE = /\b(ryvix|rivix|ryvics|rivics|ryvex|rivex|ry vix|rye vix|ry vics|rye vics|ryvicks|rivicks)\b/;
+const WAKE_LEAD = /^(ryvix|rivix|ryvics|rivics|ryvex|rivex|ry vix|rye vix|ry vics|rye vics|ryvicks|rivicks)[\s,.:!-]*/i;
+let rec = null, wantListen = false, armedUntil = 0, micLive = false, muteUntil = 0;
+const deaf = () => speech.playing || busy || Date.now() < muteUntil;
+const micBtn = $('#mic');
+function updateMic() {
+  micBtn.classList.toggle('on', micLive || !!rec);
+  const t = micLive ? 'Mic is on. Click to stop' : 'Talk to Ryvix';
+  micBtn.title = t; micBtn.setAttribute('aria-label', t);
+}
+function startRec() {
+  if (!SR) { sys('Speech recognition is not supported in this browser. Chrome or Edge work best. You can still type.'); wantListen = false; return; }
+  if (rec) return;
+  const r = new SR();
+  rec = r;
+  r.lang = cfg.lang || 'en-US'; r.interimResults = true; r.continuous = true; r.maxAlternatives = 1;
+  r.onstart = () => { if (!busy && !speech.playing) setState('listening'); updateMic(); };
+  r.onresult = e => {
+    if (deaf()) return;
+    let interim = '', fin = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const res = e.results[i];
+      if (res.isFinal) fin += res[0].transcript; else interim += res[0].transcript;
+    }
+    if (interim) caption(interim, true);
+    if (fin.trim()) onHeard(fin.trim());
+  };
+  r.onerror = e => {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      wantListen = false; micLive = false; cfg.wake = false; micOk = false; releaseMic(); saveCfg(); refreshPills(); miniSync();
+      addMsg('err', micHelp({ name: 'NotAllowedError' }));
+    }
+  };
+  r.onend = () => {
+    if (rec === r) rec = null;
+    updateMic();
+    if (!busy && !speech.playing && state === 'listening') setState('idle');
+    if (wantListen && (micLive || (!busy && !speech.playing))) setTimeout(() => { if (wantListen && !rec) startRec(); }, 250);
+  };
+  try { r.start(); } catch (e) { rec = null; }
+}
+function pauseListening() {
+  if (micLive) return; // live mic keeps running; results are ignored while Ryvix talks (see deaf)
+  if (rec) { try { rec.abort(); } catch (e) {} }
+}
+function resumeListening() {
+  if (micLive) { muteUntil = Date.now() + 700; if (state === 'idle') setState('listening'); }
+  if (wantListen && !rec) startRec();
+}
+function onHeard(text) {
+  if (!cfg.wake) { caption(''); handleInput(text); return; }
+  const low = text.toLowerCase();
+  const idx = low.search(WAKE_RE);
+  if (idx >= 0) {
+    const cmd = text.slice(idx).replace(WAKE_LEAD, '').trim();
+    if (cmd) handleInput(cmd);
+    else { armedUntil = Date.now() + 8000; respond(`Yes, ${cfg.name}?`); }
+  } else if (Date.now() < armedUntil) {
+    armedUntil = 0; handleInput(text);
+  }
+}
+let micOk = false;
+function micHelp(e) {
+  const n = e && e.name;
+  if (n === 'NotFoundError' || n === 'DevicesNotFoundError') return 'No microphone was found. Plug one in or check your system sound input settings, then try again.';
+  if (n === 'NotReadableError' || n === 'TrackStartError') return 'The microphone is busy in another app. Close that app and try again.';
+  if (n === 'NotAllowedError' || n === 'SecurityError' || n === 'PermissionDeniedError') {
+    return 'The microphone is blocked. Click the icon at the left of the address bar, set Microphone to Allow, and reload the page.' +
+      (location.protocol === 'file:' ? ' Browsers do not remember this for files opened from disk, so run start-ryvix.bat (or python -m http.server 8000 in this folder) and open http://localhost:8000/ryvix.html instead.' : '');
+  }
+  return 'Could not open the microphone (' + (n || 'unknown error') + ').';
+}
+let micStream = null;
+async function ensureMic() {
+  if (micStream && micStream.getTracks().some(t => t.readyState === 'live')) return true;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true;
+  // Already granted on this origin? Browser will not ask again, so just proceed.
+  try {
+    if (navigator.permissions && navigator.permissions.query) {
+      const p = await navigator.permissions.query({ name: 'microphone' });
+      if (p.state === 'denied') { addMsg('err', micHelp({ name: 'NotAllowedError' })); return false; }
+    }
+  } catch (e) {}
+  try {
+    // Keep this stream open for the session so the browser never re-prompts.
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    micOk = true; store.set('micGranted', true);
+    return true;
+  } catch (e) { addMsg('err', micHelp(e)); return false; }
+}
+function releaseMic() {
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+}
+function startLive() {
+  micLive = true; wantListen = true;
+  stopSpeech(); setState('listening'); caption('Listening...', true);
+  if (!rec) startRec();
+  updateMic(); miniSync();
+  armAutoMini(true);
+  if (location.protocol === 'file:' || !window.isSecureContext) {
+    sys('Your browser will not remember mic permission for a page opened from a file. Double-click start-ryvix.bat (Windows) or start-ryvix.command (Mac/Linux) in this folder instead. It opens Ryvix at http://localhost:8000/ryvix.html, where Allow is remembered.');
+  }
+}
+function stopLive() {
+  micLive = false; wantListen = false;
+  if (rec) { try { rec.abort(); } catch (e) {} }
+  if (!cfg.wake) releaseMic();
+  caption('');
+  if (state === 'listening') setState('idle');
+  armAutoMini(false); closeMini();
+  updateMic(); miniSync();
+}
+
+/* ---------- floating mini window (Document Picture-in-Picture) ---------- */
+async function openMini() {
+  if (mini) { try { mini.focus(); } catch (e) {} return; }
+  if (!window.documentPictureInPicture) return;
+  try {
+    const w = await documentPictureInPicture.requestWindow({ width: 300, height: 124 });
+    mini = w;
+    const hue = getComputedStyle(document.body).getPropertyValue('--h').trim() || '190';
+    const d = w.document;
+    const st = d.createElement('style');
+    st.textContent = `*{box-sizing:border-box}body{margin:0;padding:12px 14px;background:#06121a;color:hsl(${hue} 100% 70%);font:12px/1.4 ui-monospace,Consolas,monospace;display:flex;flex-direction:column;gap:8px;height:100vh}
+.row{display:flex;align-items:center;gap:8px;letter-spacing:.14em;font-size:11px}
+.dot{width:9px;height:9px;border-radius:50%;background:hsl(${hue} 100% 50% / .35)}
+.dot.on{background:hsl(${hue} 100% 60%);box-shadow:0 0 10px hsl(${hue} 100% 60%)}
+.cap{flex:1;min-height:0;overflow:hidden;color:#cfe9f2;opacity:.9;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+button{font:inherit;letter-spacing:.12em;padding:8px;border-radius:8px;border:1px solid hsl(${hue} 100% 60%);background:hsl(${hue} 100% 50% / .12);color:inherit;cursor:pointer}
+button.on{background:hsl(${hue} 100% 60%);color:#001018}`;
+    d.head.append(st);
+    const row = d.createElement('div'); row.className = 'row';
+    const dot = d.createElement('span'); dot.className = 'dot';
+    const lab = d.createElement('span');
+    row.append(dot, d.createTextNode('RYVIX '), lab);
+    const cap = d.createElement('div'); cap.className = 'cap';
+    const btn = d.createElement('button'); btn.type = 'button';
+    btn.addEventListener('click', () => { toggleMic(); });
+    d.body.append(row, cap, btn);
+    miniEls = { dot, lab, cap, btn };
+    w.addEventListener('pagehide', () => { mini = null; miniEls = null; });
+    miniSync();
+  } catch (e) { mini = null; miniEls = null; }
+}
+function closeMini() { if (mini) { try { mini.close(); } catch (e) {} } mini = null; miniEls = null; }
+function miniSync() {
+  if (!miniEls) return;
+  miniEls.dot.classList.toggle('on', micLive || !!rec);
+  miniEls.lab.textContent = '· ' + (STATE_LABEL[state] || '');
+  miniEls.cap.textContent = $('#caption').textContent;
+  miniEls.btn.textContent = micLive ? 'STOP MIC' : 'START MIC';
+  miniEls.btn.classList.toggle('on', micLive);
+}
+$('#sMini').addEventListener('click', () => {
+  if (!window.documentPictureInPicture) { $('#sStatus').textContent = 'The floating window needs Chrome or Edge.'; return; }
+  openMini();
+});
+// Auto-open only when you leave the tab (switch tabs / minimize); close when you come back.
+function armAutoMini(on) {
+  try { if (navigator.mediaSession) navigator.mediaSession.setActionHandler('enterpictureinpicture', on ? () => { openMini(); } : null); } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { if ((micLive || rec) && !mini) openMini(); } // fallback; browsers may require the handler above
+  else closeMini();
+});
+
+async function toggleMic() {
+  ensureAudio();
+  if (micLive) { stopLive(); return; }
+  if (!(await ensureMic())) return;
+  if (cfg.wake) { armedUntil = Date.now() + 10000; stopSpeech(); caption('Listening...', true); if (!rec) { wantListen = true; startRec(); } return; }
+  startLive();
+}
+micBtn.addEventListener('click', toggleMic);
+
+/* ---------- local commands ---------- */
+const SITES = {
+  youtube: 'https://www.youtube.com', google: 'https://www.google.com', gmail: 'https://mail.google.com', github: 'https://github.com',
+  twitter: 'https://x.com', x: 'https://x.com', reddit: 'https://www.reddit.com', maps: 'https://maps.google.com', netflix: 'https://www.netflix.com',
+  spotify: 'https://open.spotify.com', wikipedia: 'https://www.wikipedia.org', amazon: 'https://www.amazon.com', twitch: 'https://www.twitch.tv',
+  openrouter: 'https://openrouter.ai', calendar: 'https://calendar.google.com', drive: 'https://drive.google.com', discord: 'https://discord.com/app',
+  news: 'https://news.google.com', chatgpt: 'https://chatgpt.com', claude: 'https://claude.ai', linkedin: 'https://www.linkedin.com', instagram: 'https://www.instagram.com'
+};
+const HUES = { cyan: 190, blue: 215, red: 0, gold: 42, yellow: 52, green: 135, purple: 272, violet: 272, orange: 24, pink: 322, magenta: 300 };
+function openUrl(url) {
+  const w = window.open(url, '_blank');
+  if (w) { try { w.opener = null; } catch (e) {} return true; }
+  return false;
+}
+const BLOCKED = 'Your browser blocked the pop-up. Allow pop-ups for this page and ask again.';
+const WX = [[0, 'clear skies'], [2, 'partly cloudy'], [3, 'overcast'], [48, 'foggy'], [57, 'drizzling'], [67, 'raining'], [77, 'snowing'], [82, 'showery'], [86, 'snow showers'], [99, 'thunderstorms']];
+const wxText = c => (WX.find(([m]) => c <= m) || [0, 'unsettled'])[1];
+
+async function weather(place) {
+  let lat, lon, label = '';
+  if (place) {
+    const g = await (await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&name=' + encodeURIComponent(place))).json();
+    if (!g.results || !g.results.length) return `I could not find a place called ${place}.`;
+    lat = g.results[0].latitude; lon = g.results[0].longitude; label = ' in ' + g.results[0].name;
+  } else {
+    const pos = await new Promise((ok, no) => {
+      if (!navigator.geolocation) return no(new Error('no geolocation'));
+      navigator.geolocation.getCurrentPosition(ok, no, { timeout: 9000 });
+    }).catch(() => null);
+    if (!pos) return 'I could not get your location. Allow location access, or ask for the weather in a specific city.';
+    lat = pos.coords.latitude; lon = pos.coords.longitude;
+  }
+  const f = /^en-US/i.test(navigator.language);
+  const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=1&temperature_unit=${f ? 'fahrenheit' : 'celsius'}&wind_speed_unit=${f ? 'mph' : 'kmh'}`;
+  const j = await (await fetch(u)).json();
+  const c = j.current, d = j.daily, deg = f ? ' degrees' : ' degrees Celsius';
+  return `It is ${Math.round(c.temperature_2m)}${deg}${label}, ${wxText(c.weather_code)}, with winds at ${Math.round(c.wind_speed_10m)} ${f ? 'miles per hour' : 'kilometres per hour'}. Today's high is ${Math.round(d.temperature_2m_max[0])} and the low is ${Math.round(d.temperature_2m_min[0])}, with a ${d.precipitation_probability_max[0] || 0} percent chance of precipitation.`;
+}
+
+function mathAnswer(expr) {
+  let e = expr.toLowerCase()
+    .replace(/multiplied by|times/g, '*').replace(/divided by|over/g, '/').replace(/plus/g, '+').replace(/minus/g, '-')
+    .replace(/to the power of/g, '**').replace(/\^/g, '**').replace(/(\d)\s*x\s*(\d)/g, '$1*$2').replace(/,/g, '');
+  if (!/^[\d\s+\-*/().%]+$/.test(e) || !/\d/.test(e) || !/[+\-*/%]/.test(e)) return null;
+  try {
+    const v = Function('"use strict";return (' + e + ')')();
+    if (typeof v !== 'number' || !isFinite(v)) return 'That does not resolve to a number.';
+    return `That comes to ${Math.round(v * 1e8) / 1e8}.`;
+  } catch (err) { return null; }
+}
+function sysReport() {
+  const b = [];
+  if (batt.level !== null) b.push(`battery at ${Math.round(batt.level * 100)} percent${batt.charging ? ', charging' : ''}`);
+  const c = navigator.connection;
+  b.push(navigator.onLine ? `network online${c && c.downlink ? ' at about ' + c.downlink + ' megabits' : ''}` : 'network offline');
+  if (navigator.hardwareConcurrency) b.push(`${navigator.hardwareConcurrency} logical cores`);
+  if (navigator.deviceMemory) b.push(`${navigator.deviceMemory} gigabytes of memory`);
+  b.push(cfg.orKey ? `language link ready on ${cfg.model.split('/').pop()}` : 'no OpenRouter key set');
+  b.push(cfg.fishKey ? 'Fish Audio voice active' : 'using the browser voice');
+  return `Diagnostics complete, ${cfg.name}. ` + b.join(', ') + '.';
+}
+const durMs = (n, u) => parseFloat(n) * (/^h/.test(u) ? 3600000 : /^m/.test(u) ? 60000 : 1000);
+const NOTES_KEY = 'ryvix.notes';
+if (store.get(NOTES_KEY, null) === null) { const old = store.get('jarvis.notes', null); if (old !== null) store.set(NOTES_KEY, old); }
+
+async function tryLocal(raw) {
+  const q = raw.toLowerCase().replace(/[.,!?]+$/g, '').replace(/^(hey |ok |okay )?(ryvix|rivix|ryvics|rivics|ry vix|rye vix|rye vics)[, ]*/, '').replace(/^(please|can you|could you|would you) /, '').trim();
+  let m;
+  if (/^(stop|be quiet|silence|enough|cancel|never mind)$/.test(q)) { return ''; }
+  if (/^(help|what can you do|commands|list commands)$/.test(q))
+    return 'I can tell the time and date, open sites, search the web, play things on YouTube, do arithmetic, set timers and reminders, take notes, check the weather, run diagnostics, flip coins, roll dice, and change the interface colour. Anything else goes to the language model.';
+  if (/^(what('s| is)( the)? )?(current )?time( is it)?( now| right now)?$|^what time is it/.test(q))
+    return `It is ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}, ${cfg.name}.`;
+  if (/^(what('s| is)( the)? |tell me the )?(today'?s )?(date|day)( is it)?( today)?$|^what day is it/.test(q))
+    return `Today is ${new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}.`;
+  if (/^(red alert|battle stations)/.test(q)) { setHue(0); return `Red alert engaged, ${cfg.name}.`; }
+  if (/^(stand down|all clear|normal)/.test(q)) { setHue(190); return 'Standing down. Interface restored.'; }
+  if ((m = q.match(/(?:colou?r|theme|interface|hud|lights?).*\b(cyan|blue|red|gold|yellow|green|purple|violet|orange|pink|magenta)\b|(?:change|switch|make|turn).*\b(cyan|blue|red|gold|yellow|green|purple|violet|orange|pink|magenta)\b/))) {
+    const c = m[1] || m[2]; setHue(HUES[c]); return `Interface set to ${c}.`;
+  }
+  if (/^mute( voice)?$|^voice off$/.test(q)) { cfg.voiceOn = false; saveCfg(); refreshPills(); stopSpeech(); return ''; }
+  if (/^unmute( voice)?$|^voice on$/.test(q)) { cfg.voiceOn = true; saveCfg(); refreshPills(); return 'Voice restored.'; }
+  if (/^(clear|reset)\b.*\b(chat|conversation|history|log|memory)\b/.test(q)) { history = []; $('#log').textContent = ''; caption(''); return 'Conversation cleared.'; }
+  if (/full ?screen/.test(q)) { toggleFs(); return ''; }
+  if (/^(system )?(status|diagnostics?|report)( report)?$|^run (a )?(system )?(diagnostics?|check)$/.test(q)) return sysReport();
+  if (/^(flip|toss) a coin$/.test(q)) return `It landed on ${Math.random() < .5 ? 'heads' : 'tails'}.`;
+  if ((m = q.match(/^roll (?:a |an )?(?:d|die|dice|(\d+)[- ]sided)\s*(\d+)?/))) {
+    const n = parseInt(m[1] || m[2] || '6', 10); if (n > 1) return `You rolled a ${1 + Math.floor(Math.random() * n)}.`;
+  }
+  if ((m = q.match(/^(?:set|start)(?: a)? timer (?:for )?(\d+(?:\.\d+)?)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)/))) {
+    const ms = durMs(m[1], m[2]); addTimer(ms, ''); return `Timer set for ${fmtDur(ms)}.`;
+  }
+  if ((m = q.match(/^remind me (?:in|after) (\d+(?:\.\d+)?)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)(?: to (.+))?$/))) {
+    const ms = durMs(m[1], m[2]); addTimer(ms, m[3] || ''); return `Very well. I will remind you in ${fmtDur(ms)}.`;
+  }
+  if ((m = q.match(/^(?:take a note|add a note|add note|note that|note)[: ]+(.+)$/))) {
+    const n = store.get(NOTES_KEY, []); n.push(m[1]); store.set(NOTES_KEY, n); return `Noted. You now have ${n.length} ${n.length === 1 ? 'note' : 'notes'}.`;
+  }
+  if (/^(read|show|what are)( me)?( all)?( of)?( my)? notes$/.test(q)) {
+    const n = store.get(NOTES_KEY, []); return n.length ? n.map((x, i) => `Note ${i + 1}: ${x}.`).join(' ') : 'You have no notes.';
+  }
+  if (/^(clear|delete|erase)( all)?( of)?( my)? notes$/.test(q)) { store.set(NOTES_KEY, []); return 'Notes erased.'; }
+  if (/^(what('s| is) )?(the )?weather( like)?( today| now| outside)?$/.test(q)) return weather('').catch(() => 'I could not reach the weather service.');
+  if ((m = q.match(/^(?:what('s| is) )?(?:the )?weather (?:in|for|at) (.+)$/))) return weather(m[1]).catch(() => 'I could not reach the weather service.');
+  if ((m = q.match(/^(?:open|launch|go to|take me to)\s+(.+)$/))) {
+    const t = m[1].replace(/^(the |my )/, '').replace(/ (website|site|app)$/, '').trim();
+    let url;
+    if (SITES[t]) url = SITES[t];
+    else if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(t)) url = 'https://' + t;
+    else url = 'https://www.google.com/search?q=' + encodeURIComponent(t);
+    return openUrl(url) ? `Opening ${t}.` : BLOCKED;
+  }
+  if ((m = q.match(/^(?:search(?: the web)?(?: for)?|google|look up)\s+(.+)$/)))
+    return openUrl('https://www.google.com/search?q=' + encodeURIComponent(m[1])) ? `Searching for ${m[1]}.` : BLOCKED;
+  if ((m = q.match(/^play\s+(.+?)(?: on youtube)?$/)))
+    return openUrl('https://www.youtube.com/results?search_query=' + encodeURIComponent(m[1])) ? `Searching YouTube for ${m[1]}.` : BLOCKED;
+  if ((m = q.match(/^(?:calculate|calc|compute|what(?:'s| is)|how much is)\s+(.+)$/))) { const a = mathAnswer(m[1]); if (a) return a; }
+  return null;
+}
+function setHue(h) { hueT = h; cfg.hue = h; saveCfg(); }
+
+/* ---------- language model ---------- */
+function sysPrompt() {
+  const now = new Date().toLocaleString([], { dateStyle: 'full', timeStyle: 'short' });
+  return `${cfg.system}\n\nAddress the user as "${cfg.name}". Current local date and time: ${now}.`;
+}
+function takeSentences(pend, final) {
+  const out = []; let m;
+  while ((m = pend.match(/^([\s\S]*?[.!?])(\s+)/))) { out.push(m[1]); pend = pend.slice(m[0].length); }
+  if (!final && pend.length > 260) { const cut = pend.lastIndexOf(' ', 240); if (cut > 0) { out.push(pend.slice(0, cut)); pend = pend.slice(cut + 1); } }
+  if (final && pend.trim()) { out.push(pend); pend = ''; }
+  return [out, pend];
+}
+async function askLLM(text) {
+  if (!cfg.orKey) {
+    respond(`I need an OpenRouter key before I can think, ${cfg.name}. Opening settings.`);
+    openSettings(); return;
+  }
+  if (currentCtrl) currentCtrl.abort();
+  const ctrl = currentCtrl = new AbortController();
+  history.push({ role: 'user', content: text });
+  history = history.slice(-16);
+  busy = true; setState('thinking');
+  caption('Contacting OpenRouter...', true);
+  let full = '', pend = '', el = null;
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST', signal: ctrl.signal,
+      headers: { 'Authorization': 'Bearer ' + cfg.orKey, 'Content-Type': 'application/json', 'HTTP-Referer': location.origin && location.origin !== 'null' ? location.origin : 'http://localhost', 'X-Title': 'RYVIX' },
+      body: JSON.stringify({ model: cfg.model, stream: true, messages: [{ role: 'system', content: sysPrompt() }, ...history] })
+    });
+    if (!res.ok) {
+      let msg = res.status + '';
+      try { const j = await res.json(); msg = (j.error && j.error.message) || msg; } catch (e) {}
+      if (res.status === 401) msg = 'The OpenRouter key was rejected. Check it in settings.';
+      if (res.status === 402) msg = 'OpenRouter says this model needs credits. Add credits or pick a :free model.';
+      if (res.status === 429) msg = 'Rate limited by OpenRouter. Wait a moment or switch models.';
+      throw new Error(msg);
+    }
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+        if (!line.startsWith('data:')) continue;
+        const d = line.slice(5).trim();
+        if (!d || d === '[DONE]') continue;
+        let j; try { j = JSON.parse(d); } catch (e) { continue; }
+        if (j.error) throw new Error(j.error.message || 'Stream error');
+        const tok = j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content;
+        if (!tok) continue;
+        if (!el) el = addMsg('jarvis', '');
+        full += tok; el.textContent = full; $('#log').scrollTop = $('#log').scrollHeight;
+        if (!speech.playing) caption(full);
+        pend += tok;
+        const [s, rest] = takeSentences(pend, false); pend = rest;
+        s.forEach(say);
+      }
+    }
+    const [s] = takeSentences(pend, true); s.forEach(say);
+    if (!full.trim()) { addMsg('err', 'The model returned an empty reply. Try again or choose a different model.'); history.pop(); }
+    else history.push({ role: 'assistant', content: full });
+  } catch (e) {
+    if (e.name !== 'AbortError') { addMsg('err', e.message || 'Request failed.'); history.pop(); }
+  } finally {
+    if (currentCtrl === ctrl) { currentCtrl = null; busy = false; }
+    if (!speech.playing && !speech.queue.length) { setState('idle'); resumeListening(); }
+  }
+}
+async function handleInput(text) {
+  text = (text || '').trim();
+  if (!text) return;
+  stopSpeech();
+  addMsg('user', text);
+  caption(text, true);
+  try {
+    busy = true; setState('thinking');
+    const local = await tryLocal(text);
+    busy = false;
+    if (local !== null) {
+      if (local) respond(local);
+      else if (!speech.playing) { setState('idle'); resumeListening(); }
+      return;
+    }
+  } catch (e) { busy = false; addMsg('err', 'That command failed: ' + (e.message || e)); setState('idle'); return; }
+  await askLLM(text);
+}
+
+/* ---------- form, chips, shortcuts ---------- */
+$('#form').addEventListener('submit', e => {
+  e.preventDefault();
+  ensureAudio();
+  const v = $('#inp').value; $('#inp').value = '';
+  handleInput(v);
+});
+$('#chips').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  ensureAudio(); handleInput(b.dataset.q);
+});
+function toggleFs() {
+  if (document.fullscreenElement) document.exitFullscreen(); else if (root.requestFullscreen) root.requestFullscreen().catch(() => {});
+}
+$('#btnFs').addEventListener('click', toggleFs);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (!$('#settings').hidden) closeSettings();
+    else { if (currentCtrl) currentCtrl.abort(); stopSpeech(); }
+  }
+});
+
+/* ---------- settings ---------- */
+function openSettings() {
+  $('#sOr').value = cfg.orKey; $('#sModel').value = cfg.model; $('#sFish').value = cfg.fishKey; $('#sVoice').value = cfg.fishVoice;
+  $('#sFishModel').value = cfg.fishModel; $('#sLang').value = cfg.lang; $('#sName').value = cfg.name; $('#sSystem').value = cfg.system;
+  $('#sVoiceOn').checked = cfg.voiceOn; $('#sFallback').checked = cfg.fallback; $('#sWake').checked = cfg.wake;
+  $('#settings').hidden = false;
+  setTimeout(() => $(cfg.orKey ? '#sName' : '#sOr').focus(), 30);
+}
+function closeSettings() { $('#settings').hidden = true; }
+function applySettings() {
+  cfg.orKey = $('#sOr').value.trim(); cfg.model = $('#sModel').value.trim() || 'openrouter/auto';
+  cfg.fishKey = $('#sFish').value.trim(); cfg.fishVoice = $('#sVoice').value.trim(); cfg.fishModel = $('#sFishModel').value;
+  cfg.lang = $('#sLang').value.trim() || 'en-US'; cfg.name = $('#sName').value.trim() || 'sir';
+  cfg.system = $('#sSystem').value.trim() || DEFAULT_SYSTEM;
+  cfg.voiceOn = $('#sVoiceOn').checked; cfg.fallback = $('#sFallback').checked;
+  const wasWake = cfg.wake; cfg.wake = $('#sWake').checked;
+  fishWarned = false; saveCfg(); refreshPills();
+  if (cfg.wake && !wasWake) micLive = false;
+  if (cfg.wake && !wasWake) ensureMic().then(ok => { if (ok) { wantListen = true; startRec(); } else { cfg.wake = false; saveCfg(); refreshPills(); } });
+  if (!cfg.wake && wasWake) { wantListen = false; pauseListening(); }
+}
+$('#btnSet').addEventListener('click', openSettings);
+$('#sCancel').addEventListener('click', closeSettings);
+$('#settings').addEventListener('mousedown', e => { if (e.target === $('#settings')) closeSettings(); });
+$('#sSave').addEventListener('click', () => { applySettings(); closeSettings(); sys('Configuration saved.'); });
+$('#sTest').addEventListener('click', async () => {
+  applySettings(); ensureAudio(); stopSpeech(); fishWarned = false;
+  const st = $('#sStatus');
+  st.textContent = 'Testing...';
+  const out = [];
+  if (!cfg.orKey) out.push('OpenRouter: no key entered.');
+  else {
+    try {
+      const r = await fetch('https://openrouter.ai/api/v1/auth/key', { headers: { 'Authorization': 'Bearer ' + cfg.orKey } });
+      out.push(r.ok ? 'OpenRouter: key accepted.' : r.status === 401 ? 'OpenRouter: key rejected (401). Check for typos or extra spaces.' : 'OpenRouter: error ' + r.status + '.');
+    } catch (e) {
+      out.push('OpenRouter: could not connect (' + (e.message || 'network error') + '). Something is blocking the request: open the file in Chrome or Edge directly (not inside another app), turn off ad blockers for it, or serve it with python -m http.server.');
+    }
+  }
+  st.textContent = out.join('\n') + '\nTesting voice...';
+  const line = `Voice check complete. All systems nominal, ${cfg.name}.`;
+  if (!cfg.fishKey) {
+    out.push('Fish Audio: no key entered, so the browser voice is used.');
+    st.textContent = out.join('\n');
+    await synthSpeak(line);
+  } else {
+    try {
+      const blob = await fishTTS(line);
+      out.push('Fish Audio: working.');
+      st.textContent = out.join('\n');
+      await playBlob(blob);
+    } catch (e) {
+      const m = e && e.message ? e.message : 'network error';
+      out.push('Fish Audio: failed (' + m + ').' + (/failed to fetch|networkerror/i.test(m) ? ' The browser blocked the request, most likely a CORS restriction. Try setting "Fish model header" to API default. If it still fails, a small proxy is needed.' : ''));
+      st.textContent = out.join('\n');
+    }
+  }
+});
+
+/* ---------- reactor core ---------- */
+const cv = $('#core'), ctx = cv.getContext('2d');
+let dpr = 1, W = 0, H = 0;
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+}
+if (window.ResizeObserver) new ResizeObserver(resize).observe(cv); else window.addEventListener('resize', resize);
+cv.addEventListener('click', () => { ensureAudio(); toggleMic(); });
+
+let hue = cfg.hue, hueT = cfg.hue, level = 0, a1 = 0, a2 = 0, last = performance.now();
+const dots = Array.from({ length: 70 }, () => ({ a: Math.random() * TAU, r: .12 + Math.random() * .85, s: (Math.random() - .5) * .0004, z: Math.random() }));
+const col = (a, l = 62) => `hsla(${hue.toFixed(1)},100%,${l}%,${a})`;
+const ang = (a, b) => { let d = Math.abs(a - b) % TAU; return d > Math.PI ? TAU - d : d; };
+
+function sample(t) {
+  let target;
+  if (speech.mode === 'audio' && analyser) {
+    analyser.getByteFrequencyData(freq);
+    let s = 0; for (let i = 0; i < freq.length; i++) s += freq[i];
+    target = s / freq.length / 140;
+  } else if (speech.mode === 'synth') target = .35 + .22 * Math.sin(t / 90) + .12 * Math.sin(t / 37);
+  else if (state === 'listening') target = .16 + .1 * Math.sin(t / 220);
+  else if (state === 'thinking') target = .2 + .08 * Math.sin(t / 120);
+  else target = .05 + .03 * Math.sin(t / 900);
+  level += (Math.min(target, 1.2) - level) * .22;
+}
+
+function frame(t) {
+  requestAnimationFrame(frame);
+  if (!W || !H) return;
+  const dt = Math.min(60, t - last); last = t;
+  sample(t);
+  if (Math.abs(hueT - hue) > .3) { hue += (hueT - hue) * .06; root.style.setProperty('--h', hue.toFixed(1)); }
+  const sp = ({ idle: .6, listening: 1, thinking: 2.8, speaking: 1.5 })[state] * (reduceMotion ? .3 : 1);
+  a1 += dt * sp * .00035; a2 += dt * sp * .0005;
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  const cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 * .97;
+  ctx.lineCap = 'butt'; ctx.shadowColor = col(.9); ctx.shadowBlur = 0; ctx.setLineDash([]);
+
+  // drifting particles
+  dots.forEach(d => {
+    d.a += d.s * dt * (1 + sp);
+    const x = cx + Math.cos(d.a) * R * d.r, y = cy + Math.sin(d.a) * R * d.r;
+    ctx.fillStyle = col(.15 + d.z * .5); ctx.fillRect(x, y, 1 + d.z * 1.6, 1 + d.z * 1.6);
+  });
+
+  // outer ring
+  ctx.strokeStyle = col(.5); ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
+
+  // tick ring
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(a1);
+  ctx.beginPath();
+  for (let i = 0; i < 180; i++) { if (i % 5 === 0) continue; const a = i / 180 * TAU; ctx.moveTo(Math.cos(a) * R * .95, Math.sin(a) * R * .95); ctx.lineTo(Math.cos(a) * R * .92, Math.sin(a) * R * .92); }
+  ctx.strokeStyle = col(.4); ctx.lineWidth = 1; ctx.stroke();
+  ctx.beginPath();
+  for (let i = 0; i < 180; i += 5) { const a = i / 180 * TAU; ctx.moveTo(Math.cos(a) * R * .95, Math.sin(a) * R * .95); ctx.lineTo(Math.cos(a) * R * .89, Math.sin(a) * R * .89); }
+  ctx.strokeStyle = col(.85); ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.restore();
+
+  // bright arc segments
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(-a2 * 1.3);
+  ctx.shadowBlur = 12; ctx.strokeStyle = col(.9); ctx.lineWidth = R * .022;
+  [[.1, 1.0], [1.5, 2.3], [3.3, 4.1], [4.7, 5.5]].forEach(([s, e]) => { ctx.beginPath(); ctx.arc(0, 0, R * .84, s, e); ctx.stroke(); });
+  ctx.restore();
+
+  // dashed ring
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(-a1 * 1.6);
+  ctx.setLineDash([R * .012, R * .03]); ctx.strokeStyle = col(.7); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(0, 0, R * .77, 0, TAU); ctx.stroke();
+  ctx.restore(); ctx.setLineDash([]);
+
+  // segmented ring with scanning highlight
+  const segs = 24, sweep = (a2 * 3) % TAU;
+  ctx.shadowBlur = 10; ctx.lineWidth = R * (.03 + level * .03);
+  for (let i = 0; i < segs; i++) {
+    const s = i / segs * TAU + .03, e = (i + 1) / segs * TAU - .03, mid = (s + e) / 2;
+    ctx.strokeStyle = col(.22 + .78 * Math.max(0, 1 - ang(mid, sweep) / 1.1));
+    ctx.beginPath(); ctx.arc(cx, cy, R * .68, s, e); ctx.stroke();
+  }
+
+  // waveform ring
+  const N = 120, base = R * .5, amp = R * .13;
+  ctx.beginPath();
+  for (let i = 0; i <= N; i++) {
+    const a = i / N * TAU, k = i <= N / 2 ? i : N - i;
+    let v;
+    if (speech.mode === 'audio' && analyser) v = freq[Math.min(freq.length - 1, Math.floor(k / (N / 2) * freq.length * .6))] / 255;
+    else v = ((Math.sin(a * 5 + t / 300) + Math.sin(a * 9 - t / 210) + Math.sin(a * 3 + t / 500)) / 6 + .5) * Math.min(1, level * 1.8 + .12);
+    const r = base + amp * v;
+    const x = cx + Math.cos(a - Math.PI / 2) * r, y = cy + Math.sin(a - Math.PI / 2) * r;
+    if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = col(.06); ctx.fill();
+  ctx.strokeStyle = col(.95, 70); ctx.lineWidth = 2; ctx.shadowBlur = 16; ctx.stroke();
+
+  // inner hex and triangle
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(a2 * 2);
+  ctx.shadowBlur = 8; ctx.strokeStyle = col(.7); ctx.lineWidth = 1.5;
+  [[6, R * .38, 0], [3, R * .3, Math.PI / 2]].forEach(([n, r, off]) => {
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) { const a = i / n * TAU + off; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+    ctx.stroke();
+  });
+  ctx.restore();
+
+  // core
+  ctx.shadowBlur = 0;
+  const cr = R * (.3 + level * .1);
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, cr);
+  g.addColorStop(0, `hsla(${hue.toFixed(1)},100%,94%,1)`); g.addColorStop(.4, col(.85, 68)); g.addColorStop(1, col(0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, cr, 0, TAU); ctx.fill();
+  const fs = Math.max(9, R * .062);
+  ctx.font = `700 ${fs}px Orbitron, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if ('letterSpacing' in ctx) ctx.letterSpacing = (fs * .18) + 'px';
+  ctx.fillStyle = `hsla(${hue.toFixed(1)},100%,9%,.92)`; ctx.fillText('RYVIX', cx, cy);
+
+  // orbiting markers
+  ctx.shadowBlur = 10; ctx.fillStyle = col(1, 75);
+  for (let i = 0; i < 8; i++) {
+    const a = a1 * (1.2 + i * .15) * (i % 2 ? -1 : 1) + i * 0.8;
+    ctx.beginPath(); ctx.arc(cx + Math.cos(a) * R * .91, cy + Math.sin(a) * R * .91, R * .008 + 1, 0, TAU); ctx.fill();
+  }
+}
+requestAnimationFrame(frame);
+
+/* ---------- boot ---------- */
+const BOOT = ['LOADING CORE MODULES', 'CALIBRATING REACTOR', 'LINKING OPENROUTER', 'SYNCING VOICE ENGINE', 'ARMING COMMAND PARSER'];
+$('#bootBtn').addEventListener('click', async () => {
+  ensureAudio();
+  const btn = $('#bootBtn'); btn.hidden = true;
+  const log = $('#bootLog');
+  for (const l of BOOT) {
+    const d = document.createElement('div'); d.innerHTML = `${l} ... <span class="ok">OK</span>`; log.append(d);
+    await new Promise(r => setTimeout(r, reduceMotion ? 60 : 340));
+  }
+  await new Promise(r => setTimeout(r, 300));
+  $('#boot').classList.add('gone');
+  setTimeout(() => $('#boot').remove(), 1000);
+  const h = new Date().getHours();
+  const g = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  const hello = `${g}, ${cfg.name}. All systems are online.`;
+  addMsg('jarvis', hello); say(hello);
+  if (!cfg.orKey) { sys('Open settings (the gear, top right) and add your OpenRouter key to enable conversation. Say "help" for built-in commands.'); setTimeout(openSettings, 900); }
+  if (cfg.wake) ensureMic().then(ok => { if (ok) { wantListen = true; startRec(); } else { cfg.wake = false; saveCfg(); refreshPills(); } });
+  else if (SR) sys('To talk, click the mic button and choose Allow when your browser asks for the microphone.');
+  $('#inp').focus();
+});
+
+root.style.setProperty('--h', hue);
+updateStatic(); refreshPills();
+})();
+</script>
+</body>
+</html>
