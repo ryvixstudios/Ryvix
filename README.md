@@ -19,3 +19,7 @@ please boost this and its cool :)
 if it says something about model, go to settings and paste this instead
 
 dots-studio/dots-3-note-preview:free
+
+              or
+              
+      openai/gpt-4o-mini
