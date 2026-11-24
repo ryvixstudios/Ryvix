@@ -14,3 +14,8 @@ when u say "Ryvix", its pronounced Ry as in ryan, and vix as in fix but v instea
 the ai might think "Ryvix" is lyrics etc.
 if it asks for api key, you can use OpenRouter.ai to create a free one.
 please boost this and its cool :)
+
+***IMPORTANT**
+if it says something about model, go to settings and paste this instead
+
+dots-studio/dots-3-note-preview:free
